@@ -10,7 +10,7 @@ export class LineChartComponent implements OnInit {
   constructor() { }
 
   ngOnInit() {
-    this.drawChart();
+    this.drawChart2();
   }
 	@ViewChild('chartContainer') private chartContainer: ElementRef;
 	@ViewChild('canvasElement') private canvasElement: ElementRef;
@@ -42,17 +42,62 @@ export class LineChartComponent implements OnInit {
 	private marginLeft = 5;
 
   public onInit(): void {
-		this.drawChart();
+		this.drawChart2();
 	}
 
 	public onChanges(): void {
-		this.drawChart();
+		this.drawChart2();
   }
   
   private drawChart2(): void {
-    const data = [10,20,30, 40, 40, 100];
-    const reduceWidth =50;
-    const width = this.opt.width ? this.opt.width : (this.chartContainer.nativeElement.offsetWidth - reduceWidth);
+    const optData = [
+			{ time: 1, close: 10 },
+			{ time: 2, close: 5 },
+			{ time: 3, close: 3 },
+			{ time: 4, close: 7 },
+			{ time: 5, close: 9 },
+			{ time: 6, close: 21 },
+			{ time: 7, close: 2 },
+			{ time: 8, close: 4 },
+			{ time: 9, close: 10 },
+			{ time: 10, close: 5 },
+		];
+		const size = optData.length;
+		const width = this.opt.width ? this.opt.width : (this.canvasElement.nativeElement.offsetWidth);
+		const height = this.opt.width ? this.opt.width : (this.canvasElement.nativeElement.offsetHeight);
+		const min = Math.min.apply(Math, optData.map(function(o){return o.close;}))
+		const max = Math.max.apply(Math, optData.map(function(o){return o.close;}))
+		const yMod = height/(max-min);
+		const xMod = width/(optData[size-1].time - optData[0].time);
+
+		console.log('w:',width);
+		console.log('h:',height);
+		
+		const data = optData.map( x => {
+			return { time: x.time*xMod, close: (x.close - min)*yMod };
+		});
+
+		console.log(data);
+
+		const canvas = this.canvasElement.nativeElement;
+		const context = canvas.getContext('2d');
+		context.lineCap = 'round';
+	
+		context.beginPath();
+
+		let prevPoint = { time: 0, close: 0 };
+		for(const point of data){
+			context.moveTo(prevPoint.time, prevPoint.close);
+			context.lineTo(point.time, point.close);
+			prevPoint = point;
+		}
+	
+
+		// context.moveTo(40, 10);
+		// context.lineTo(21, 21);
+
+
+		context.stroke();
   }
 
 	private drawChart(): void {
