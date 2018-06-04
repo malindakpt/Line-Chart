@@ -14,7 +14,10 @@ export class LineChartComponent implements OnInit {
   }
 	@ViewChild('chartContainer') private chartContainer: ElementRef;
 	@ViewChild('canvasElement') private canvasElement: ElementRef;
-  @Input() private options: object;
+	@Input() private options: object;
+	
+	private afac = 1;
+	private context;
 	private opt = {
 		width: null,
 		padding: 0,
@@ -53,7 +56,7 @@ export class LineChartComponent implements OnInit {
     const optData = [
 			{ time: 1, close: 10 },
 			{ time: 2, close: 5 },
-			{ time: 3, close: 3 },
+			{ time: 3, close: 6 },
 			{ time: 4, close: 7 },
 			{ time: 5, close: 9 },
 			{ time: 6, close: 21 },
@@ -69,35 +72,65 @@ export class LineChartComponent implements OnInit {
 		const max = Math.max.apply(Math, optData.map(function(o){return o.close;}))
 		const yMod = height/(max-min);
 		const xMod = width/(optData[size-1].time - optData[0].time);
+		const startTime = optData[0].time;
+
+		
 
 		console.log('w:',width);
 		console.log('h:',height);
 		
 		const data = optData.map( x => {
-			return { time: x.time*xMod, close: (x.close - min)*yMod };
+			return { time: (x.time-startTime)*xMod, close: (x.close - min)*yMod };
 		});
 
 		console.log(data);
 
 		const canvas = this.canvasElement.nativeElement;
-		const context = canvas.getContext('2d');
-		context.lineCap = 'round';
-	
-		context.beginPath();
+		this.context = canvas.getContext('2d');
 
+		canvas.width = this.afac*width;
+		canvas.height = this.afac*height;
+		canvas.style.width = width+'px';
+		canvas.style.height = height+'px';
+		this.context.lineWidth = this.afac;
+
+		// canvas.width = width;
+		// canvas.height = height;
+
+		this.context.lineCap = 'round';
+		this.context.translate(0, this.afac*height);
+		this.context.scale(1, -1);
+		
+	
+	
+		this.context.beginPath();
+		// context.translate(0.5, 0.5);
 		let prevPoint = { time: 0, close: 0 };
-		for(const point of data){
-			context.moveTo(prevPoint.time, prevPoint.close);
-			context.lineTo(point.time, point.close);
+
+		// context.moveTo(prevPoint.time, prevPoint.close);
+		// context.lineTo(0, data[0].close);
+		this.drawChartLine(prevPoint.time, prevPoint.close, 0, data[0].close);
+		this.context.stroke();
+		prevPoint = { time: 0, close: data[0].close };
+		for(let i=1; i< size; i++){
+			const point  = data[i];
+			// this.context.moveTo(prevPoint.time, prevPoint.close);
+			// this.context.lineTo(point.time, point.close);
+			this.drawChartLine(prevPoint.time, prevPoint.close, point.time, point.close);
 			prevPoint = point;
+			this.context.stroke();
 		}
+
+		// this.context.moveTo(prevPoint.time, prevPoint.close);
+		// this.context.lineTo(prevPoint.time, 0);
+		this.drawChartLine(prevPoint.time, prevPoint.close, prevPoint.time, 0);
+		this.context.stroke();
 	
+	///////////
 
-		// context.moveTo(40, 10);
-		// context.lineTo(21, 21);
-
-
-		context.stroke();
+	// context.moveTo(50*afac, 50*afac);
+	// context.lineTo(100*afac, 100*afac);
+	// context.stroke();
   }
 
 	private drawChart(): void {
@@ -264,13 +297,10 @@ export class LineChartComponent implements OnInit {
 		}
 	}
 
-	private drawChartLine(ctx: any, x1: number, y1: number, x2: number, y2: number): void {
-		if (this.opt.allowMultiColor) {
-			ctx.beginPath();
-			ctx.moveTo(x1, y1);
-		}
-		ctx.lineTo(x2, y2);
-		ctx.stroke();
+	private drawChartLine(x1: number, y1: number, x2: number, y2: number): void {
+		this.context.moveTo(x1*this.afac, y1*this.afac);
+		this.context.lineTo(x2*this.afac, y2*this.afac);
+		this.context.stroke();
 	}
 
 }
