@@ -16,8 +16,9 @@ export class LineChartComponent implements OnInit {
 	@ViewChild('canvasElement') private canvasElement: ElementRef;
 	@Input() private options: object;
 	
-	private afac = 1;
+	private afac = 5;
 	private context;
+	
 	private opt = {
 		width: null,
 		padding: 0,
@@ -30,9 +31,9 @@ export class LineChartComponent implements OnInit {
 		showY: false,
 		showMinMax: false,
 		allowMultiColor: false,
-		lineWidth: 0.5,
+		lineWidth: 2,
 		axisWidth: 1,
-		lineColor: '#118f49',
+		lineColor: '#1a75ff',
 		gradColor1: '#c2e4c8',
 		gradColor2: '#c2e4c8',
 		oldColor: '#959595',
@@ -40,7 +41,7 @@ export class LineChartComponent implements OnInit {
 		highColor: '#ff2413',
 		axisColor: '#1528ff',
 		fontColor: '#0718c6',
-		backgroundColor: '#ffffff',
+		backgroundColor: '#CEECF5',
 	};
 	private marginLeft = 5;
 
@@ -65,25 +66,21 @@ export class LineChartComponent implements OnInit {
 			{ time: 9, close: 10 },
 			{ time: 10, close: 5 },
 		];
+		
 		const size = optData.length;
-		const width = this.opt.width ? this.opt.width : (this.canvasElement.nativeElement.offsetWidth);
-		const height = this.opt.width ? this.opt.width : (this.canvasElement.nativeElement.offsetHeight);
+		const width = this.opt.width ? this.opt.width : (this.chartContainer.nativeElement.offsetWidth);
+		const height = this.opt.width ? this.opt.width : (this.chartContainer.nativeElement.offsetHeight);
 		const min = Math.min.apply(Math, optData.map(function(o){return o.close;}))
 		const max = Math.max.apply(Math, optData.map(function(o){return o.close;}))
 		const yMod = height/(max-min);
 		const xMod = width/(optData[size-1].time - optData[0].time);
 		const startTime = optData[0].time;
 
-		
-
-		console.log('w:',width);
-		console.log('h:',height);
-		
 		const data = optData.map( x => {
 			return { time: (x.time-startTime)*xMod, close: (x.close - min)*yMod };
 		});
 
-		console.log(data);
+		const lastDayVal = 	data[3].close;
 
 		const canvas = this.canvasElement.nativeElement;
 		this.context = canvas.getContext('2d');
@@ -92,45 +89,65 @@ export class LineChartComponent implements OnInit {
 		canvas.height = this.afac*height;
 		canvas.style.width = width+'px';
 		canvas.style.height = height+'px';
-		this.context.lineWidth = this.afac;
 
-		// canvas.width = width;
-		// canvas.height = height;
+		this.context.fillStyle = this.opt.backgroundColor;
+		this.context.fillRect(0, 0, width*this.afac, height*this.afac);
+		this.context.lineWidth = this.afac*this.opt.lineWidth;
 
 		this.context.lineCap = 'round';
 		this.context.translate(0, this.afac*height);
 		this.context.scale(1, -1);
 		
-	
-	
+		let lastColor = this.opt.lineColor;
+		let newColor = this.opt.lineColor;
 		this.context.beginPath();
-		// context.translate(0.5, 0.5);
 		let prevPoint = { time: 0, close: 0 };
 
-		// context.moveTo(prevPoint.time, prevPoint.close);
-		// context.lineTo(0, data[0].close);
+		this.context.strokeStyle = this.opt.backgroundColor;
 		this.drawChartLine(prevPoint.time, prevPoint.close, 0, data[0].close);
-		this.context.stroke();
 		prevPoint = { time: 0, close: data[0].close };
+		this.context.strokeStyle = this.opt.lineColor;
 		for(let i=1; i< size; i++){
+
+			
+
+
 			const point  = data[i];
-			// this.context.moveTo(prevPoint.time, prevPoint.close);
-			// this.context.lineTo(point.time, point.close);
-			this.drawChartLine(prevPoint.time, prevPoint.close, point.time, point.close);
+
+			if(point.close > lastDayVal){
+				newColor = this.opt.highColor;
+			} else {
+				newColor = this.opt.lowColor;
+			}
+
+			if(newColor === lastColor){
+				this.context.strokeStyle = newColor;
+				this.drawChartLine(prevPoint.time, prevPoint.close, point.time, point.close);
+			} else {
+				const xGap = point.time - prevPoint.time;
+				const yGap = point.close - prevPoint.close;
+				const ratio = (lastDayVal - prevPoint.close)/yGap;
+
+				const midPointX = prevPoint.time + xGap*ratio;
+				const midPointY = prevPoint.close + yGap*ratio;
+
+				this.context.strokeStyle = lastColor;
+				this.drawChartLine(prevPoint.time, prevPoint.close, midPointX, midPointY);
+
+				this.context.strokeStyle = newColor;
+				this.drawChartLine(midPointX, midPointY, point.time, point.close);
+				lastColor = newColor;
+			}
+
+
+		
 			prevPoint = point;
-			this.context.stroke();
+
+
+
 		}
-
-		// this.context.moveTo(prevPoint.time, prevPoint.close);
-		// this.context.lineTo(prevPoint.time, 0);
+		this.context.strokeStyle = this.opt.backgroundColor;
 		this.drawChartLine(prevPoint.time, prevPoint.close, prevPoint.time, 0);
-		this.context.stroke();
-	
-	///////////
-
-	// context.moveTo(50*afac, 50*afac);
-	// context.lineTo(100*afac, 100*afac);
-	// context.stroke();
   }
 
 	private drawChart(): void {
@@ -298,6 +315,7 @@ export class LineChartComponent implements OnInit {
 	}
 
 	private drawChartLine(x1: number, y1: number, x2: number, y2: number): void {
+		this.context.beginPath();
 		this.context.moveTo(x1*this.afac, y1*this.afac);
 		this.context.lineTo(x2*this.afac, y2*this.afac);
 		this.context.stroke();
